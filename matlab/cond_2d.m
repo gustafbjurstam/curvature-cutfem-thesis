@@ -1,13 +1,13 @@
 clear; clc; close all;
 
-base_dir = '~/Work/repositories/SF250X/cutfem-workfiles/output_files/curvature_p1_2d';
+base_dir = '../results/curvature_p1_2d';
 examples = [
-            % "Peanut_elem_Quads";
-            % "Star_elem_Quads";
-            % "Amoeba_elem_Quads";
-            % "Peanut_surf_Quads";
-            % "Star_surf_Quads";
-            % "Amoeba_surf_Quads";
+            "Peanut_elem_Quads";
+            "Star_elem_Quads";
+            "Amoeba_elem_Quads";
+            "Peanut_surf_Quads";
+            "Star_surf_Quads";
+            "Amoeba_surf_Quads";
 
             "Peanut_elem_Tris";
             "Star_elem_Tris";

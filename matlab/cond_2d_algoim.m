@@ -1,6 +1,6 @@
 clear; clc; close all;
 
-base_dir = '~/Work/repositories/SF250X/cutfem-workfiles/output_files/curvature_2d_algoim';
+base_dir = '../results/curvature_2d_algoim';
 examples = [
             "Peanut_elem_Tris";
             "Star_elem_Tris";

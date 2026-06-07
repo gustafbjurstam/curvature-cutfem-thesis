@@ -17,9 +17,9 @@
 #include <vector>
 
 // function space
-// #define HEXA_Q1 // SCRIPT_MARKER3
+#define HEXA_Q1 // SCRIPT_MARKER3
 // #define HEXA_Q2
-#define TET_P2
+// #define TET_P2
 
 // Geometry. Exactly one should be defined.
 #define ELL_TOR // SCRIPT_MARKER1
@@ -27,8 +27,8 @@
 // #define SPHERE
 
 // Stabilisation. Exactly one should be defined.
-// #define SURF_STAB // SCRIPT_MARKER2
-#define ELEM_STAB
+#define ELEM_STAB // SCRIPT_MARKER2
+// #define ELEM_STAB
 // #define PATCH_ONLY
 
 #if defined(ELEM_STAB)
@@ -844,14 +844,6 @@ int main(int argc, char **argv) {
 
                 fun_t H = curvature.solve();
                 error[i][j] = curvature.get_error(H);
-
-                // if (MPIcf::IamMaster()) {
-                //     paraview_t para_curv(curvature.mesh(),
-                //                          path_output_figures + "curvature_" + std::to_string(i + 1) +
-                //                              "_stab" + std::to_string(j + 1) + ".vtk");
-                //     para_curv.add(H, "H", 0, 3);
-                //     para_curv.add(phi_h, "levelset", 0, 1);
-                // }
 
                 if (j == 0) {
                     n_err[i] = curvature.normal_error_max();
