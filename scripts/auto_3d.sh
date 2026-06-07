@@ -8,6 +8,7 @@ STABILISATIONS=("VOL_GHOST" "FACE_GHOST")
 
 for geo in "${GEOMETRIES[@]}"; do
     for stab in "${STABILISATIONS[@]}"; do
+        TARGET="${geo}_${stab}"
         echo "========================================"
         echo "Configuring and compiling for: $TARGET"
         echo "========================================"

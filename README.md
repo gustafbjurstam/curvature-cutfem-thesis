@@ -1,6 +1,6 @@
 # Code for *Cut Finite Element Approximation of the Mean Curvature Vector*
 
-This repository contains the code used to generate the numerical data and figures in my master's thesis *Cut Finite Element Approximation of the Mean Curvature Vector*. You can find more details on the [projects tab of my website](https://bjurstam.eu/projects)
+This repository contains the code used to generate the numerical data and figures in my master's thesis *Cut Finite Element Approximation of the Mean Curvature Vector*. You can find more details on the [projects tab of my website](https://bjurstam.eu/projects).
 
 The code depends on the upstream [`CutFEM-Library`](https://github.com/CutFEM/CutFEM-Library/tree/development). For reproducibility, the thesis computations were run with the `development` branch at commit `952105b`.
 
