@@ -688,7 +688,7 @@ int main(int argc, char **argv) {
     example_name += ("_"+mesh);
 
     // 2. Construct the updated paths
-    const std::string base_output_path = "../output_files/curvature_p1_2d/" + example_name + "/";
+    const std::string base_output_path = "../results/curvature_p1_2d/" + example_name + "/";
     std::string path_output_data(base_output_path + "data/");
     std::string path_output_figures(base_output_path + "paraview/");
     

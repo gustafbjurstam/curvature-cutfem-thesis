@@ -16,33 +16,60 @@
 #include <memory>
 #include <vector>
 
+// function space
+// #define HEXA_Q1 // SCRIPT_MARKER3
+// #define HEXA_Q2
+#define TET_P2
+
 // Geometry. Exactly one should be defined.
-// #define ELL_TOR // SCRIPT_MARKER1
-#define DECO_CUBE
+#define ELL_TOR // SCRIPT_MARKER1
+// #define DECO_CUBE
+// #define SPHERE
 
 // Stabilisation. Exactly one should be defined.
 // #define SURF_STAB // SCRIPT_MARKER2
 #define ELEM_STAB
 // #define PATCH_ONLY
 
-const bool patching = true;
-
-#if defined(SURF_STAB)
-    const bool surfing = true;
-    const bool eleming = false;
-#elif defined(ELEM_STAB)
-    const bool surfing = false;
+#if defined(ELEM_STAB)
     const bool eleming = true;
 #elif defined(PATCH_ONLY)
-    const bool surfing = false;
     const bool eleming = false;
 #else
     #error "No stabilisation mode defined"
 #endif
 
-using lagrange_t    = LagrangeHexa3;
-using mesh_t        = MeshHexa;
-const std::string mesh = "Hexa";
+#if defined(HEXA_Q1)
+    constexpr int fe_order = 1;
+    const std::string fe_suffix = "Q1";
+    using lagrange_t    = LagrangeHexa3;
+    using mesh_t        = MeshHexa;
+    const std::string mesh = "Hexa";
+
+    const bool patching = true;
+    const bool facing   = false;
+#elif defined(HEXA_Q2)
+    constexpr int fe_order = 2;
+    const std::string fe_suffix = "Q2";
+    using lagrange_t    = LagrangeHexa3;
+    using mesh_t        = MeshHexa;
+    const std::string mesh = "Hexa";
+
+    const bool patching = true;
+    const bool facing   = false;
+#elif defined(TET_P2)
+    constexpr int fe_order = 2;
+    const std::string fe_suffix = "P2";
+    using lagrange_t    = Lagrange3;
+    using mesh_t        = Mesh3;
+    const std::string mesh = "Tet";
+
+    const bool patching = false;
+    const bool facing   = true;
+#else
+    #error "No FE order defined"
+#endif
+
 using fun_test_t    = TestFunction<mesh_t>;
 using fun_t         = FunFEM<mesh_t>;
 using activemesh_t  = ActiveMesh<mesh_t>;
@@ -54,6 +81,126 @@ using interface_t   = AlgoimInterface<mesh_t, fun_t>;
 using cutfem_t      = AlgoimCutFEMUnified<mesh_t, fun_t>;
 
 using namespace globalVariable;
+
+namespace sphere {
+    const std::string example = "Sphere";
+
+
+    // Computational domain
+    const double offset_x = 0.0;
+    const double offset_y = 0.0;
+    const double offset_z = 0.0;
+
+    const double Lx = 1.3;
+
+    const double X0 = -Lx + offset_x;
+    const double Y0 = -Lx + offset_y;
+    const double Z0 = -Lx + offset_z;
+
+    const double DX = 2.0 * Lx;
+    const double DY = 2.0 * Lx;
+    const double DZ = 2.0 * Lx;
+
+    // Mesh settings
+    double const h0 = DX / 15.0;
+    const int n_refinements = 6; // 18 works for Q1
+
+    // Stabilisation
+    #if defined (HEXA_Q1)
+    const double tauP[] = {1e-2, 1e-1, 1e0};
+    const double tauS[] = {0.0, 1e-3, 1e-2, 1e-1};
+    const double tauE[] = {0.0, 1e-3, 1e-2, 1e-1};
+    #elif defined(HEXA_Q2) 
+    const double tauP[] = {1e1, 1e-1, 1e-2};
+    const double tauS[] = {0.0, 1e0, 1e1, 1e2};
+    const double tauE[] = {0.0, 1e0, 1e1, 1e2};
+    #else
+    const double tauP[] = {1e-2, 1e-1, 1e0};
+    const double tauS[] = {0.0, 1e-3, 1e-2, 1e-1};
+    const double tauE[] = {0.0, 1e-3, 1e-2, 1e-1};
+    #endif
+    
+    
+    // Helper functions
+    template <typename T> T sq(const T& x) { return x * x; }
+
+    // Templated Level Set Function
+    template<typename T>
+    T phi(const T& x, const T& y, const T& z){
+        using std::sqrt; // Permits ADL for algoim::sqrt
+        
+        T phi = sqrt(sq(x)+sq(y)+sq(z)) - 1.0;
+
+        return phi;
+    }
+
+    // Templated First Derivatives
+    template<typename T>
+    T phi_x(const T& x, const T& y, const T& z){
+        using std::sqrt;
+        T factor = phi(x,y,z) +  1.0;
+
+        return x / (factor + 1e-13);
+    }
+
+    template<typename T>
+    T phi_y(const T& x, const T& y, const T& z){
+        using std::sqrt;
+        T factor = phi(x,y,z) +  1.0;
+
+        return y / (factor + 1e-13);
+    }
+
+    template<typename T>
+    T phi_z(const T& x, const T& y, const T& z){
+        using std::sqrt;
+        T factor = phi(x,y,z) +  1.0;
+
+        return z / (factor + 1e-13);
+    }
+
+    // Double-precision Second Derivatives
+    double phi_xx(double x, double y, double z){
+        double a = y*y + z*z;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        return a / denom;
+    }
+
+    double phi_yy(double x, double y, double z){
+        double a = x*x + z*z;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        return a / denom;
+    }
+
+
+    double phi_zz(double x, double y, double z){
+        double a = y*y + x*x;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        return a / denom;
+    }
+
+
+    double phi_xy(double x, double y, double z){
+        double a = - x * y;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        
+        return a / denom;
+    }
+
+    double phi_xz(double x, double y, double z){
+        double a = - x * z;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        
+        return a / denom;
+    }
+
+    double phi_yz(double x, double y, double z){
+        double a = - z * y;
+        double denom = pow(phi(x,y,z) + 1.0,3.0);
+        
+        return a / denom;
+    }
+}
 
 namespace elliptic_torus {
     const std::string example = "Elliptic_Torus";
@@ -81,12 +228,25 @@ namespace elliptic_torus {
 
     // Mesh settings
     double const h0 = DX / 15.0;
-    const int n_refinements = 18;
 
     // Stabilisation
-    const double tauP[] = { 1e-2, 1e-1, 1e0};
+    #if defined (HEXA_Q1)
+    const double tauP[] = {1e-2, 1e-1, 1e0};
     const double tauS[] = {0.0, 1e-3, 1e-2, 1e-1};
     const double tauE[] = {0.0, 1e-3, 1e-2, 1e-1};
+    const int n_refinements = 18; // 18 works for Q1
+    #elif defined(HEXA_Q2) 
+    const double tauP[] = {1e1, 1e-1, 1e-2};
+    const double tauS[] = {0.0, 1e0, 1e1, 1e2};
+    const double tauE[] = {0.0, 1e0, 1e1, 1e2};
+    const int n_refinements = 12; // 18 works for Q1
+    #else
+    const double tauP[] = {1e-4, 1e-3, 1e-2};
+    const double tauS[] = {0.0, 1e-4, 1e-3, 1e-2};
+    const double tauE[] = {0.0, 1e-4, 1e-3, 1e-2};
+    const int n_refinements = 14; // 18 works for Q1
+    #endif
+    
     
     // Helper functions
     template <typename T> T sq(const T& x) { return x * x; }
@@ -182,13 +342,29 @@ namespace decocube {
     const double DY = 2.0 * L;
     const double DZ = 2.0 * L;
 
-    // Mesh settings
-    const double h0 = DX / (40.0 * sqrt(2)); // Changes n_refinements, needs to be reduced by 2 to have the same final size
-    const int n_refinements = 12;
-
+    // Stabilisation
+    #if defined (HEXA_Q1)
     const double tauP[] = {1e-3, 1e-2, 1e-1};
     const double tauS[] = {0.0, 1e-3, 1e-2, 1e-1};
     const double tauE[] = {0.0, 1e-3, 1e-2, 1e-1};
+    // Mesh setting
+    const double h0 = DX / (40.0 * sqrt(2)); // Changes n_refinements, needs to be reduced by 2 to have the same final size
+    const int n_refinements = 6; // 11 works for Q1
+    #elif defined(HEXA_Q2) 
+    const double tauP[] = {1e1, 1e-1, 1e-2};
+    const double tauS[] = {0.0, 1e0, 1e1, 1e2};
+    const double tauE[] = {0.0, 1e0, 1e1, 1e2};
+    // Mesh setting
+    const double h0 = DX / (40.0 * sqrt(2)); // Changes n_refinements, needs to be reduced by 2 to have the same final size
+    const int n_refinements = 6; 
+    #else
+    const double tauP[] = {1e-5, 1e-4, 1e-3};
+    const double tauS[] = {0.0, 1e-6, 1e-5, 1e-4};
+    const double tauE[] = {0.0, 1e-6, 1e-5, 1e-4};
+    // Mesh setting
+    const double h0 = DX / (40.0);
+    const int n_refinements = 6; 
+    #endif
 
     // ========================================================================
     // 1. TEMPLATED EVALUATIONS (Compatible with double & algoim::Interval)
@@ -346,6 +522,8 @@ namespace decocube {
     using namespace elliptic_torus;
 #elif defined(DECO_CUBE)
     using namespace decocube;
+#elif defined(SPHERE)
+    using namespace sphere;
 #else
     #error "No mesh type defined"
 #endif
@@ -453,7 +631,7 @@ class CurvatureAlgoim3D {
         ProblemOption problem_option;
         problem_option.order_space_element_quadrature_ = 8;
         problem_option.algoim_surface_quad_deg_        = 6;
-        problem_option.algoim_bernstein_deg_           = 1;
+        problem_option.algoim_bernstein_deg_           = 2;
         problem_option.algoim_vol_quad_deg_            = 6;
 
         problem = std::make_unique<cutfem_t>(*Vh_, phi_h_, problem_option);
@@ -485,6 +663,29 @@ class CurvatureAlgoim3D {
             *surface_mesh_);
     }
 
+    void face_stab(const double tau) {
+        constexpr int D_mesh = mesh_t::Rd::d;
+        TestFunction<mesh_t> H(*Vh_, D_mesh), v(*Vh_, D_mesh);
+        const double h = surface_mesh_->Th.get_mesh_size();
+        Normal n;
+        
+        auto DnH = grad(H) * n;
+        auto Dnv = grad(v) * n;
+        #if defined(TET_P2)
+
+        problem->addFaceStabilization(
+            tau * innerProduct(jump(DnH), jump(Dnv)),
+            *surface_mesh_);
+            
+        auto Dn2H = grad(DnH) * n;
+        auto Dn2v = grad(Dnv) * n;
+        problem->addFaceStabilization(
+            tau * h*h* innerProduct(jump(Dn2H), jump(Dn2v)),
+            *surface_mesh_);
+        #endif
+    }
+
+
     void elem_stab(const double tau) {
         constexpr int D_mesh = mesh_t::Rd::d;
         TestFunction<mesh_t> H(*Vh_, D_mesh), v(*Vh_, D_mesh);
@@ -505,28 +706,6 @@ class CurvatureAlgoim3D {
         problem->BaseFEM::addBilinear(
             tau * pow(h, -1.0) * innerProduct(d_n_H, d_n_v),
             *surface_mesh_);
-    }
-
-    void surf_stab(const double tau) {
-        constexpr int D_mesh = mesh_t::Rd::d;
-        TestFunction<mesh_t> H(*Vh_, D_mesh), v(*Vh_, D_mesh);
-        const double h = surface_mesh_->Th.get_mesh_size();
-
-        Normal n;
-
-        auto d_n_H = grad(H) * n;
-        auto d_n_v = grad(v) * n;
-
-        auto d2_n_H = grad(d_n_H) * n;
-        auto d2_n_v = grad(d_n_v) * n;
-
-        // This really requires order three terms to be correct
-
-        // Combine terms to halve Algoim quadrature generation overhead.
-        auto combined_stab = tau * innerProduct(d_n_H, d_n_v) +
-                             tau * h * h * innerProduct(d2_n_H, d2_n_v);
-
-        problem->addBilinear(combined_stab, interface_);
     }
 
     fun_t solve() {
@@ -575,21 +754,21 @@ class CurvatureAlgoim3D {
 int main(int argc, char **argv) {
     MPIcf cfMPI(argc, argv);
 
-    std::string example_name = example + "_algoim_q1";
+    std::string example_name = example + "_algoim_" + fe_suffix;
     if (eleming) {
         example_name += "_elem";
-    } else if (surfing) {
-        example_name += "_surf";
     } else {
         example_name += "_patch";
     }
 
-    if (!patching) {
+    if (!patching && !facing) {
         example_name += "_only";
+    } else if (facing) {
+        example_name += "_face";
     }
     example_name += "_" + mesh;
 
-    const std::string base_output_path = "../output_files/curvature_3d_algoim_hexa/" + example_name + "/";
+    const std::string base_output_path = "../results/curvature_3d_algoim/" + example_name + "/";
     std::string path_output_data(base_output_path + "data/");
     std::string path_output_figures(base_output_path + "paraview/");
 
@@ -604,9 +783,7 @@ int main(int argc, char **argv) {
     int stab_cases = 1;
     if (eleming) {
         stab_cases = sizeof(tauE) / sizeof(tauE[0]);
-    } else if (surfing) {
-        stab_cases = sizeof(tauS) / sizeof(tauS[0]);
-    } else if (patching) {
+    } else if (patching || facing) {
         stab_cases = sizeof(tauP) / sizeof(tauP[0]);
     }
 
@@ -623,12 +800,18 @@ int main(int argc, char **argv) {
 
         bool export_matrix = (i < int(floor(1.5 * n_refinements / 2.0)));
 
-        // Q1 curvature approximation on hexahedra.
-        lagrange_t FEcurv(1);
+        // Qk curvature approximation on hexahedra.
+        lagrange_t FEcurv(fe_order);
         space_t CurvV(Th, FEcurv);
 
-        // Q1 interpolation of the level set. This must match algoim_bernstein_deg_ = 1.
-        space_t Lh(Th, DataFE<mesh_t>::P1);
+        // Qk interpolation of the level set.
+        #if defined(HEXA_Q1)
+            space_t Lh(Th, DataFE<mesh_t>::P1);
+        #elif defined(HEXA_Q2)
+            space_t Lh(Th, DataFE<mesh_t>::P2);
+        #elif defined(TET_P2)
+            space_t Lh(Th, DataFE<mesh_t>::P2);
+        #endif
         fun_t phi_h(Lh, fun_levelset);
 
         for (int j = 0; j < stab_cases; ++j) {
@@ -638,13 +821,15 @@ int main(int argc, char **argv) {
                 if (eleming && tauE[j] > 1e-15) {
                     curvature.elem_stab(tauE[j]);
                 }
-                if (surfing && tauS[j] > 1e-15) {
-                    curvature.surf_stab(tauS[j]);
-                }
                 if (patching) {
-                    double current_tauP = (!eleming && !surfing) ? tauP[j] : tauP[0];
+                    double current_tauP = !eleming ? tauP[j] : tauP[0];
                     if (current_tauP > 1e-15) {
                         curvature.patch_stab(current_tauP);
+                    }
+                } else if (facing) {
+                    double current_tauP = !eleming ? tauP[j] : tauP[0];
+                    if (current_tauP > 1e-15) {
+                        curvature.face_stab(current_tauP);
                     }
                 }
 
@@ -684,11 +869,9 @@ int main(int argc, char **argv) {
         if (output_data.is_open()) {
             output_data << std::setprecision(16);
 
-            std::string filename_base = example + "_Algoim_Hexa_Q1";
+            std::string filename_base = example + "_Algoim_3d_" + fe_suffix;
             if (eleming) {
                 filename_base += "_elem";
-            } else if (surfing) {
-                filename_base += "_surf";
             } else {
                 filename_base += "_patch";
             }
@@ -696,7 +879,7 @@ int main(int argc, char **argv) {
             output_data << filename_base << "\n";
 
             for (int j = 0; j < stab_cases; ++j) {
-                double current_tau = eleming ? tauE[j] : (surfing ? tauS[j] : tauP[j]);
+                double current_tau = eleming ? tauE[j] : tauP[j];
                 output_data << current_tau << (j < stab_cases - 1 ? " " : "");
             }
             output_data << "\n";
