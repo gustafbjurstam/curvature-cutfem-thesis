@@ -13,6 +13,8 @@ A working setup needs:
 - UMFPACK/SuiteSparse for the default CutFEM configuration;
 - LAPACKE and LAPACK for the Algoim-based targets;
 - the upstream [`CutFEM-Library`](https://github.com/CutFEM/CutFEM-Library/tree/development) checked out at commit `952105b` on the `development` branch.
+- Julia for post-processing and plotting;
+- a working LaTeX installation for the PGFPlotsX plotting backend.
 
 Build `CutFEM-Library` using its own instructions. This project assumes that the library has already been built and that its location is passed through `CUTFEM_ROOT`.
 
@@ -102,30 +104,36 @@ git restore src/curvature/*.cpp
 
 ## Post-processing and plotting
 
-The MATLAB scripts in `matlab/` are used to process the generated data and produce the convergence and condition-number plots. They are intended to be run after the corresponding C++ experiments have produced output under `results/`.
+The Julia scripts in `julia/` are used to process the generated data and produce the convergence and condition-number plots. They are intended to be run after the corresponding C++ experiments have produced output under `results/`.
 
-Run the MATLAB scripts from the `matlab/` directory.
+The Julia environment is specified by `julia/Project.toml` and `julia/Manifest.toml`. To install the required Julia packages, run:
 
+```bash
+cd julia
+julia install_deps.jl
+```
 The main plotting scripts are:
 
 ```bash
-matlab/convergence_2d.m
-matlab/convergence_3d.m
-matlab/convergence_2d_algoim.m
-matlab/convergence_3d_algoim.m
-matlab/cond_2d.m
-matlab/cond_2d_algoim.m
+julia --project=. conv_2d.jl
+julia --project=. conv_3d.jl
+julia --project=. conv_2d_algoim.jl
+julia --project=. conv_3d_algoim.jl
+julia --project=. cond_2d.jl
+julia --project=. cond_2d_algoim.jl
 ```
+The scripts can be run from any directory, since paths are resolved relative to the script files. The expected input directories are:
 
-The convergence scripts call `process_example_data.m`, while the condition-number scripts call `process_condition_number.m`. The lower-level plotting is handled by helper functions in the same directory.
-
-The scripts assume that the generated data are stored under `../results/`, relative to the `matlab/` directory. For example, the expected output directories include:
-
-```text
+```bash
 results/curvature_p1_2d
 results/curvature_p1_3d
 results/curvature_2d_algoim
 results/curvature_3d_algoim
 ```
+Generated figures are written to:
+```bash
+figures/
+```
+The convergence scripts call `convplotting.jl`, while the condition-number scripts call both `convplotting.jl` and `condplotting.jl`. The scripts are deliberately short and can be edited directly to select which examples to process, change plot ranges, or adapt the figures.
 
-The MATLAB scripts are deliberately short and can be edited directly to select which examples to process, change plot ranges, or adapt paths to a different local directory layout.
+The committed manifest was generated with Julia 1.12.4 and is included to make the plotting environment reproducible.
